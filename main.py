@@ -19,31 +19,72 @@ def load_slc(filename):
     return slc
 
 
+def normal(reader):
+
+    # Contouring for the skin
+    mcSkin = vtk.vtkMarchingCubes()
+    mcSkin.SetInputConnection(reader.GetOutputPort())
+    mcSkin.SetNumberOfContours(1)
+    mcSkin.SetValue(0, 50)
+
+    # Contouring for the bones
+    mcBone = vtk.vtkMarchingCubes()
+    mcBone.SetInputConnection(reader.GetOutputPort())
+    mcBone.SetNumberOfContours(1)
+    mcBone.SetValue(0, 75)
+
+    # Create a sphere for clipping
+    sphere = vtk.vtkSphere()
+    sphere.SetCenter(80, 20, 120)
+    sphere.SetRadius(60)
+
+    # Clip skin with a sphere
+    clipper = vtk.vtkClipPolyData()
+    clipper.SetInputConnection(mcSkin.GetOutputPort())
+    clipper.SetClipFunction(sphere)
+    clipper.SetValue(1)
+    clipper.Update()
+
+    mapperSkin = vtk.vtkDataSetMapper()
+    mapperSkin.SetInputConnection(clipper.GetOutputPort())
+    mapperSkin.ScalarVisibilityOff()
+
+    mapperBone = vtk.vtkDataSetMapper()
+    mapperBone.SetInputConnection(mcBone.GetOutputPort())
+    mapperBone.ScalarVisibilityOff()
+
+    actorSkin = vtk.vtkActor()
+    actorSkin.SetMapper(mapperSkin)
+    actorSkin.GetProperty().SetColor(0.95, 0.64, 0.64)
+
+    actorBone = vtk.vtkActor()
+    actorBone.SetMapper(mapperBone)
+    actorBone.GetProperty().SetColor(0.9, 0.9, 0.9)
+
+    assembly = vtk.vtkAssembly()
+    assembly.AddPart(actorSkin)
+    assembly.AddPart(actorBone)
+
+    return assembly
+
+
 def main():
     print("VTK Labo 4")
 
     FILENAME = "data/vw_knee.slc"
 
-    WINDOW_WIDTH = 800
-    WINDOW_HEIGHT = 600
+    WINDOW_WIDTH = 1200
+    WINDOW_HEIGHT = 780
 
     NB_RENDERER = 4
 
     # Load SLC file
-    slc = load_slc(FILENAME)
+    reader = load_slc(FILENAME)
 
 
-    marchingCubes = vtk.vtkMarchingCubes()
-    marchingCubes.SetInputConnection(slc.GetOutputPort())
-    marchingCubes.SetValue(0, 72)
+    actor = normal(reader)
 
-    dataSetMapper = vtk.vtkDataSetMapper()
-    dataSetMapper.SetInputConnection(marchingCubes.GetOutputPort())
 
-    actor = vtk.vtkActor()
-    actor.SetMapper(dataSetMapper)
-
-    
     # Camera
     camera = vtk.vtkCamera()
     camera.SetPosition(0, 0, 30)
@@ -67,7 +108,6 @@ def main():
 
         r.SetActiveCamera(camera)
         r.ResetCamera()
-        
 
         renderers.append(r)
 
