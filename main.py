@@ -1,5 +1,5 @@
 # VTK - Labo 4 - Scanner d'un genou
-# Author : Sathiya Kirushnapillai Mathieu Monteverde
+# Author : Sathiya Kirushnapillai, Mathieu Monteverde
 
 import vtk
 
