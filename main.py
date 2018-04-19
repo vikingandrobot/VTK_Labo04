@@ -19,6 +19,26 @@ def load_slc(filename):
     return slc
 
 
+def create_outline(algorithmOutput, color):
+    """ Create an outline with a given Algorithm output
+    Args:
+        algorithmOutput: vtkAlgorithmOutput
+        color (x,y,z): Color of the outline
+    Returns:
+        vtkActor
+    """
+
+    outline = vtk.vtkOutlineFilter()
+    outline.SetInputConnection(algorithmOutput.GetOutputPort())
+    outlineMapper = vtk.vtkPolyDataMapper()
+    outlineMapper.SetInputConnection(outline.GetOutputPort())
+    outlineActor = vtk.vtkActor()
+    outlineActor.SetMapper(outlineMapper)
+    outlineActor.GetProperty().SetColor(color);
+    
+    return outlineActor
+
+
 def normal(reader):
 
     # Contouring for the skin
@@ -83,6 +103,7 @@ def main():
 
 
     actor = normal(reader)
+    outline = create_outline(reader, (0,0,0))
 
 
     # Camera
@@ -105,6 +126,7 @@ def main():
         r.SetViewport(x, y, x + 0.5, y + 0.5)
 
         r.AddActor(actor)
+        r.AddActor(outline)
 
         r.SetActiveCamera(camera)
         r.ResetCamera()
