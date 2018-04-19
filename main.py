@@ -42,16 +42,15 @@ def main():
 
     actor = vtk.vtkActor()
     actor.SetMapper(dataSetMapper)
-    actor.SetPosition(0, 0, 0)
 
-
-    # Active camera  for all
+    
+    # Camera
     camera = vtk.vtkCamera()
-    camera.SetPosition(1, 1, 100)
-
-    camera.Elevation(50)
-    camera.Dolly(0.1)
-    camera.SetFocalPoint(0, -200, 0)
+    camera.SetPosition(0, 0, 30)
+    camera.Elevation(-100)
+    camera.Azimuth(0)
+    camera.SetRoll(180)
+    camera.SetFocalPoint(0,0,0)   
 
 
     # Create the Renderers
@@ -59,13 +58,16 @@ def main():
     for i in range(0, NB_RENDERER):
         r = vtk.vtkRenderer()
         r.SetBackground(0.95, 0.95, 0.95)
-        r.SetActiveCamera(camera)
 
         x = 0 if i % 2 == 0 else 0.5
         y = (1 - 0.5 * (i // 2)) - 0.5
         r.SetViewport(x, y, x + 0.5, y + 0.5)
 
-        r.AddActor(actor) 
+        r.AddActor(actor)
+
+        r.SetActiveCamera(camera)
+        r.ResetCamera()
+        
 
         renderers.append(r)
 
