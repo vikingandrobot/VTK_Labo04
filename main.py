@@ -3,6 +3,7 @@
 
 import math
 import vtk
+from vtk.util.colors import white
 
 def load_slc(filename):
     """ Load a slc file and return its content
@@ -58,6 +59,26 @@ def normal(reader):
     sphere.SetCenter(80, 20, 120)
     sphere.SetRadius(60)
 
+    theSphere = vtk.vtkImplicitBoolean()
+    theSphere.SetOperationTypeToDifference()
+    theSphere.AddFunction(sphere)
+
+    theSphereSample = vtk.vtkSampleFunction()
+    theSphereSample.SetImplicitFunction(theSphere)
+    theSphereSample.SetModelBounds(-1000, 1000, -1000, 1000, -1000, 1000)
+    theSphereSample.SetSampleDimensions(120, 120, 120)
+    theSphereSample.ComputeNormalsOff()
+    theSphereSurface = vtk.vtkContourFilter()
+    theSphereSurface.SetInputConnection(theSphereSample.GetOutputPort())
+    theSphereSurface.SetValue(0, 0.0)
+    mapperSphere = vtk.vtkPolyDataMapper()
+    mapperSphere.SetInputConnection(theSphereSurface.GetOutputPort())
+    mapperSphere.ScalarVisibilityOff()
+    actorSphere = vtk.vtkActor()
+    actorSphere.SetMapper(mapperSphere)
+    actorSphere.GetProperty().SetColor(white)
+    actorSphere.GetProperty().SetOpacity(0.1)
+
     # Clip skin with a sphere
     clipper = vtk.vtkClipPolyData()
     clipper.SetInputConnection(mcSkin.GetOutputPort())
@@ -84,6 +105,7 @@ def normal(reader):
     assembly = vtk.vtkAssembly()
     assembly.AddPart(actorSkin)
     assembly.AddPart(actorBone)
+    assembly.AddPart(actorSphere)
 
     return assembly
 
@@ -123,9 +145,12 @@ def main():
         [0.83, 0.83, 1],
         [0.83, 0.83, 0.83]
     ]
+
     for i in range(0, NB_RENDERER):
         r = vtk.vtkRenderer()
-        r.SetBackground(RENDERERS_COLORS[i][0], RENDERERS_COLORS[i][1], RENDERERS_COLORS[i][2])
+        # r.SetBackground(RENDERERS_COLORS[i][0], RENDERERS_COLORS[i][1], RENDERERS_COLORS[i][2])
+
+        r.SetBackground(1, 1, 1)
 
         x = 0 if i % 2 == 0 else 0.5
         y = (1 - 0.5 * (i // 2)) - 0.5
@@ -139,16 +164,11 @@ def main():
 
         renderers.append(r)
 
-
     # Create the RenderWindow
     renderWindow = vtk.vtkRenderWindow()
     renderWindow.SetSize(WINDOW_WIDTH, WINDOW_HEIGHT)
-    renderWindowInteractor = vtk.vtkRenderWindowInteractor()
-    renderWindowInteractor.SetRenderWindow(renderWindow)
     for i in range(0, NB_RENDERER):
         renderWindow.AddRenderer(renderers[i])
-
-
 
     renderWindowInteractor = vtk.vtkRenderWindowInteractor()
     renderWindowInteractor.SetRenderWindow(renderWindow)
