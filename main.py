@@ -143,6 +143,14 @@ def main():
         renderWindow.AddRenderer(renderers[i])
 
 
+    
+    renderWindowInteractor = vtk.vtkRenderWindowInteractor()
+    renderWindowInteractor.SetRenderWindow(renderWindow)
+
+    # Here we specify a particular interactor style.
+    style = vtk.vtkInteractorStyleTrackballCamera()
+    renderWindowInteractor.SetInteractorStyle(style)
+
     # Start
     renderWindow.Render()
     renderWindowInteractor.Start()
