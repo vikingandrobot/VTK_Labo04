@@ -40,6 +40,86 @@ def create_outline(algorithmOutput, color):
     return outlineActor
 
 
+def tube(reader):
+
+    # Contouring for the skin
+    mcSkin = vtk.vtkMarchingCubes()
+    mcSkin.SetInputConnection(reader.GetOutputPort())
+    mcSkin.SetNumberOfContours(1)
+    mcSkin.SetValue(0, 50)
+
+    # Contouring for the bones
+    mcBone = vtk.vtkMarchingCubes()
+    mcBone.SetInputConnection(reader.GetOutputPort())
+    mcBone.SetNumberOfContours(1)
+    mcBone.SetValue(0, 75)
+
+    # Create a sphere for clipping
+    sphere = vtk.vtkSphere()
+    sphere.SetCenter(80, 20, 120)
+    sphere.SetRadius(60)
+
+    # Clip skin with a sphere
+    clipper = vtk.vtkClipPolyData()
+    clipper.SetInputConnection(mcSkin.GetOutputPort())
+    clipper.SetClipFunction(sphere)
+    clipper.SetValue(1)
+    clipper.Update()
+
+    bounds = mcSkin.GetOutput().GetBounds()
+
+    # Plan
+    plane = vtk.vtkPlane()
+    plane.SetNormal(0, 0, 1)
+    plane.SetOrigin((bounds[1] + bounds[0]) / 2.0,
+                    (bounds[3] + bounds[2]) / 2.0,
+                    bounds[4]);
+    
+    # Create cutter
+    high = plane.EvaluateFunction((bounds[1] + bounds[0]) / 2.0,
+                                  (bounds[3] + bounds[2]) / 2.0,
+                                   bounds[5]);
+
+    # Create cutter
+    cutter = vtk.vtkCutter()
+    cutter.SetCutFunction(plane)
+    cutter.SetInputConnection(mcSkin.GetOutputPort())
+    cutter.GenerateValues(18, .99, .99 * high);
+
+    # Stripper
+    stripper = vtk.vtkStripper()
+    stripper.SetInputConnection(cutter.GetOutputPort())
+    stripper.Update();
+
+    tubeFilter = vtk.vtkTubeFilter()
+    tubeFilter.SetInputConnection(stripper.GetOutputPort())
+    tubeFilter.SetRadius(.5)
+    tubeFilter.SetNumberOfSides(50)
+
+    mapperSkin = vtk.vtkDataSetMapper()
+    mapperSkin.SetInputConnection(tubeFilter.GetOutputPort())
+    mapperSkin.ScalarVisibilityOff()
+
+    mapperBone = vtk.vtkDataSetMapper()
+    mapperBone.SetInputConnection(mcBone.GetOutputPort())
+    mapperBone.ScalarVisibilityOff()
+
+    actorSkin = vtk.vtkActor()
+    actorSkin.SetMapper(mapperSkin)
+    actorSkin.GetProperty().SetColor(0.95, 0.64, 0.64)
+
+    actorBone = vtk.vtkActor()
+    actorBone.SetMapper(mapperBone)
+    actorBone.GetProperty().SetColor(0.9, 0.9, 0.9)
+
+    assembly = vtk.vtkAssembly()
+    assembly.AddPart(actorSkin)
+    assembly.AddPart(actorBone)
+
+    return assembly
+
+
+
 def normal(reader):
 
     # Contouring for the skin
@@ -124,7 +204,7 @@ def main():
     reader = load_slc(FILENAME)
 
 
-    actor = normal(reader)
+    actor = [tube(reader), normal(reader), normal(reader), normal(reader)]
     outline = create_outline(reader, (0,0,0))
 
 
@@ -156,7 +236,7 @@ def main():
         y = (1 - 0.5 * (i // 2)) - 0.5
         r.SetViewport(x, y, x + 0.5, y + 0.5)
 
-        r.AddActor(actor)
+        r.AddActor(actor[i])
         r.AddActor(outline)
 
         r.SetActiveCamera(camera)
