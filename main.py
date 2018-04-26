@@ -35,7 +35,7 @@ def create_outline(algorithmOutput, color):
     outlineActor = vtk.vtkActor()
     outlineActor.SetMapper(outlineMapper)
     outlineActor.GetProperty().SetColor(color);
-    
+
     return outlineActor
 
 
@@ -112,14 +112,20 @@ def main():
     camera.Elevation(-100)
     camera.Azimuth(0)
     camera.SetRoll(180)
-    camera.SetFocalPoint(0,0,0)   
+    camera.SetFocalPoint(0,0,0)
 
 
     # Create the Renderers
     renderers = []
+    RENDERERS_COLORS = [
+        [1, 0.83, 0.83],
+        [0.83, 1, 0.83],
+        [0.83, 0.83, 1],
+        [0.83, 0.83, 0.83]
+    ]
     for i in range(0, NB_RENDERER):
         r = vtk.vtkRenderer()
-        r.SetBackground(0.95, 0.95, 0.95)
+        r.SetBackground(RENDERERS_COLORS[i][0], RENDERERS_COLORS[i][1], RENDERERS_COLORS[i][2])
 
         x = 0 if i % 2 == 0 else 0.5
         y = (1 - 0.5 * (i // 2)) - 0.5
@@ -143,7 +149,7 @@ def main():
         renderWindow.AddRenderer(renderers[i])
 
 
-    
+
     renderWindowInteractor = vtk.vtkRenderWindowInteractor()
     renderWindowInteractor.SetRenderWindow(renderWindow)
 
