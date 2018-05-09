@@ -190,6 +190,52 @@ def normal(reader):
     return assembly
 
 
+def colorBones(reader):
+
+    # Contouring for the skin
+    mcSkin = vtk.vtkMarchingCubes()
+    mcSkin.SetInputConnection(reader.GetOutputPort())
+    mcSkin.SetNumberOfContours(1)
+    mcSkin.SetValue(0, 50)
+    mcSkin.Update()
+
+    # Contouring for the bones
+    mcBone = vtk.vtkMarchingCubes()
+    mcBone.SetInputConnection(reader.GetOutputPort())
+    mcBone.SetNumberOfContours(1)
+    mcBone.SetValue(0, 75)
+    mcBone.Update()
+
+    distanceFilter = vtk.vtkDistancePolyDataFilter()
+    distanceFilter.SetInputData(0, mcBone.GetOutput())
+    distanceFilter.SetInputData(1, mcSkin.GetOutput())
+    distanceFilter.Update()
+
+    mapper = vtk.vtkPolyDataMapper()
+    mapper.SetInputConnection(distanceFilter.GetOutputPort())
+    mapper.SetScalarRange(
+        distanceFilter.GetOutput().GetPointData().GetScalars().GetRange()[0],
+        distanceFilter.GetOutput().GetPointData().GetScalars().GetRange()[1]
+    )
+
+
+
+
+    mapperBone = vtk.vtkDataSetMapper()
+    mapperBone.SetInputConnection(mcBone.GetOutputPort())
+    mapperBone.ScalarVisibilityOff()
+
+    actorBone = vtk.vtkActor()
+    actorBone.SetMapper(mapper)
+    actorBone.GetProperty().SetColor(0.9, 0.9, 0.9)
+
+    assembly = vtk.vtkAssembly()
+    assembly.AddPart(actorBone)
+
+    return assembly
+
+
+
 def main():
     print("VTK Labo 4")
 
@@ -204,7 +250,7 @@ def main():
     reader = load_slc(FILENAME)
 
 
-    actor = [tube(reader), normal(reader), normal(reader), normal(reader)]
+    actor = [tube(reader), normal(reader), normal(reader), colorBones(reader)]
     outline = create_outline(reader, (0,0,0))
 
 
