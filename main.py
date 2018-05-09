@@ -137,26 +137,6 @@ def semiTransparent(reader):
     sphere.SetCenter(80, 20, 120)
     sphere.SetRadius(60)
 
-    theSphere = vtk.vtkImplicitBoolean()
-    theSphere.SetOperationTypeToDifference()
-    theSphere.AddFunction(sphere)
-
-    theSphereSample = vtk.vtkSampleFunction()
-    theSphereSample.SetImplicitFunction(theSphere)
-    theSphereSample.SetModelBounds(-1000, 1000, -1000, 1000, -1000, 1000)
-    theSphereSample.SetSampleDimensions(120, 120, 120)
-    theSphereSample.ComputeNormalsOff()
-    theSphereSurface = vtk.vtkContourFilter()
-    theSphereSurface.SetInputConnection(theSphereSample.GetOutputPort())
-    theSphereSurface.SetValue(0, 0.0)
-    mapperSphere = vtk.vtkPolyDataMapper()
-    mapperSphere.SetInputConnection(theSphereSurface.GetOutputPort())
-    mapperSphere.ScalarVisibilityOff()
-    actorSphere = vtk.vtkActor()
-    actorSphere.SetMapper(mapperSphere)
-    actorSphere.GetProperty().SetColor(white)
-    actorSphere.GetProperty().SetOpacity(0.1)
-
     # Clip skin with a sphere
     clipper = vtk.vtkClipPolyData()
     clipper.SetInputConnection(mcSkin.GetOutputPort())
