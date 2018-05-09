@@ -82,7 +82,7 @@ def tube(reader):
 
     # Get the number of voxel (Axis:z)
     nbVoxelZ = reader.GetDataExtent()[5]
-    
+
     # Get the size of the voxel (Axis:z)
     sizeVoxelZ = reader.GetDataSpacing()[2]
 
