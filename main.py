@@ -40,31 +40,7 @@ def create_outline(algorithmOutput, color):
     return outlineActor
 
 
-def tube(reader):
-
-    # Contouring for the skin
-    mcSkin = vtk.vtkMarchingCubes()
-    mcSkin.SetInputConnection(reader.GetOutputPort())
-    mcSkin.SetNumberOfContours(1)
-    mcSkin.SetValue(0, 50)
-
-    # Contouring for the bones
-    mcBone = vtk.vtkMarchingCubes()
-    mcBone.SetInputConnection(reader.GetOutputPort())
-    mcBone.SetNumberOfContours(1)
-    mcBone.SetValue(0, 75)
-
-    # Create a sphere for clipping
-    sphere = vtk.vtkSphere()
-    sphere.SetCenter(80, 20, 120)
-    sphere.SetRadius(60)
-
-    # Clip skin with a sphere
-    clipper = vtk.vtkClipPolyData()
-    clipper.SetInputConnection(mcSkin.GetOutputPort())
-    clipper.SetClipFunction(sphere)
-    clipper.SetValue(1)
-    clipper.Update()
+def tube(reader, mcBone, mcSkin):
 
     bounds = mcSkin.GetOutput().GetBounds()
 
@@ -75,69 +51,50 @@ def tube(reader):
                     (bounds[3] + bounds[2]) / 2.0,
                     bounds[4]);
 
-    # Create cutter
     high = plane.EvaluateFunction((bounds[1] + bounds[0]) / 2.0,
                                   (bounds[3] + bounds[2]) / 2.0,
                                    bounds[5]);
 
-    # Get the number of voxel (Axis:z)
+    # Get the number and size of voxel (Axis:z)
     nbVoxelZ = reader.GetDataExtent()[5]
-
-    # Get the size of the voxel (Axis:z)
     sizeVoxelZ = reader.GetDataSpacing()[2]
 
-
-    # Create cutter
+    # Create the tubes with vtkCutter and vtkTubeFilter
     cutter = vtk.vtkCutter()
     cutter.SetCutFunction(plane)
     cutter.SetInputConnection(mcSkin.GetOutputPort())
     cutter.GenerateValues(math.floor(nbVoxelZ * sizeVoxelZ / 10) + 1, 0, high);
 
-    # Stripper
-    stripper = vtk.vtkStripper()
-    stripper.SetInputConnection(cutter.GetOutputPort())
-    stripper.Update();
-
     tubeFilter = vtk.vtkTubeFilter()
-    tubeFilter.SetInputConnection(stripper.GetOutputPort())
+    tubeFilter.SetInputConnection(cutter.GetOutputPort())
     tubeFilter.SetRadius(.5)
     tubeFilter.SetNumberOfSides(50)
 
+    # Skin mapper and actor
     mapperSkin = vtk.vtkDataSetMapper()
     mapperSkin.SetInputConnection(tubeFilter.GetOutputPort())
     mapperSkin.ScalarVisibilityOff()
-
-    mapperBone = vtk.vtkDataSetMapper()
-    mapperBone.SetInputConnection(mcBone.GetOutputPort())
-    mapperBone.ScalarVisibilityOff()
-
     actorSkin = vtk.vtkActor()
     actorSkin.SetMapper(mapperSkin)
     actorSkin.GetProperty().SetColor(0.95, 0.64, 0.64)
 
+    # Bone mapper and actor
+    mapperBone = vtk.vtkDataSetMapper()
+    mapperBone.SetInputConnection(mcBone.GetOutputPort())
+    mapperBone.ScalarVisibilityOff()
     actorBone = vtk.vtkActor()
     actorBone.SetMapper(mapperBone)
     actorBone.GetProperty().SetColor(0.9, 0.9, 0.9)
 
+    # Group the actors
     assembly = vtk.vtkAssembly()
     assembly.AddPart(actorSkin)
     assembly.AddPart(actorBone)
 
     return assembly
 
-def semiTransparent(reader):
 
-    # Contouring for the skin
-    mcSkin = vtk.vtkMarchingCubes()
-    mcSkin.SetInputConnection(reader.GetOutputPort())
-    mcSkin.SetNumberOfContours(1)
-    mcSkin.SetValue(0, 50)
-
-    # Contouring for the bones
-    mcBone = vtk.vtkMarchingCubes()
-    mcBone.SetInputConnection(reader.GetOutputPort())
-    mcBone.SetNumberOfContours(1)
-    mcBone.SetValue(0, 75)
+def semiTransparent(mcBone, mcSkin):
 
     # Create a sphere for clipping
     sphere = vtk.vtkSphere()
@@ -151,28 +108,33 @@ def semiTransparent(reader):
     clipper.SetValue(1)
     clipper.Update()
 
+    # Skin mapper
     mapperSkin = vtk.vtkDataSetMapper()
     mapperSkin.SetInputConnection(clipper.GetOutputPort())
     mapperSkin.ScalarVisibilityOff()
 
-    mapperBone = vtk.vtkDataSetMapper()
-    mapperBone.SetInputConnection(mcBone.GetOutputPort())
-    mapperBone.ScalarVisibilityOff()
-
+    # Opaque back skin
     actorSkinBack = vtk.vtkActor()
     actorSkinBack.SetMapper(mapperSkin)
     actorSkinBack.GetProperty().SetColor(0.95, 0.64, 0.64)
     actorSkinBack.GetProperty().SetFrontfaceCulling(True)
+
+    # Transparent front skin
     actorSkinFront = vtk.vtkActor()
     actorSkinFront.SetMapper(mapperSkin)
     actorSkinFront.GetProperty().SetColor(0.95, 0.64, 0.64)
     actorSkinFront.GetProperty().SetBackfaceCulling(True)
     actorSkinFront.GetProperty().SetOpacity(0.5)
 
+    # Bone mapper and actor
+    mapperBone = vtk.vtkDataSetMapper()
+    mapperBone.SetInputConnection(mcBone.GetOutputPort())
+    mapperBone.ScalarVisibilityOff()
     actorBone = vtk.vtkActor()
     actorBone.SetMapper(mapperBone)
     actorBone.GetProperty().SetColor(0.9, 0.9, 0.9)
 
+    # Group the actors
     assembly = vtk.vtkAssembly()
     assembly.AddPart(actorSkinBack)
     assembly.AddPart(actorSkinFront)
@@ -180,19 +142,8 @@ def semiTransparent(reader):
 
     return assembly
 
-def normal(reader):
 
-    # Contouring for the skin
-    mcSkin = vtk.vtkMarchingCubes()
-    mcSkin.SetInputConnection(reader.GetOutputPort())
-    mcSkin.SetNumberOfContours(1)
-    mcSkin.SetValue(0, 50)
-
-    # Contouring for the bones
-    mcBone = vtk.vtkMarchingCubes()
-    mcBone.SetInputConnection(reader.GetOutputPort())
-    mcBone.SetNumberOfContours(1)
-    mcBone.SetValue(0, 75)
+def normal(mcBone, mcSkin):
 
     # Create a sphere for clipping
     sphere = vtk.vtkSphere()
@@ -203,6 +154,7 @@ def normal(reader):
     theSphere.SetOperationTypeToDifference()
     theSphere.AddFunction(sphere)
 
+    # Display the sphere
     theSphereSample = vtk.vtkSampleFunction()
     theSphereSample.SetImplicitFunction(theSphere)
     theSphereSample.SetModelBounds(-1000, 1000, -1000, 1000, -1000, 1000)
@@ -226,22 +178,23 @@ def normal(reader):
     clipper.SetValue(1)
     clipper.Update()
 
+    # Skin mapper and actor
     mapperSkin = vtk.vtkDataSetMapper()
     mapperSkin.SetInputConnection(clipper.GetOutputPort())
     mapperSkin.ScalarVisibilityOff()
-
-    mapperBone = vtk.vtkDataSetMapper()
-    mapperBone.SetInputConnection(mcBone.GetOutputPort())
-    mapperBone.ScalarVisibilityOff()
-
     actorSkin = vtk.vtkActor()
     actorSkin.SetMapper(mapperSkin)
     actorSkin.GetProperty().SetColor(0.95, 0.64, 0.64)
 
+    # Bone mapper and actor
+    mapperBone = vtk.vtkDataSetMapper()
+    mapperBone.SetInputConnection(mcBone.GetOutputPort())
+    mapperBone.ScalarVisibilityOff()
     actorBone = vtk.vtkActor()
     actorBone.SetMapper(mapperBone)
     actorBone.GetProperty().SetColor(0.9, 0.9, 0.9)
 
+    # Group the actors
     assembly = vtk.vtkAssembly()
     assembly.AddPart(actorSkin)
     assembly.AddPart(actorBone)
@@ -250,48 +203,33 @@ def normal(reader):
     return assembly
 
 
-def colorBones(reader):
+def colorBones(mcBone, mcSkin):
 
-    # Contouring for the skin
-    mcSkin = vtk.vtkMarchingCubes()
-    mcSkin.SetInputConnection(reader.GetOutputPort())
-    mcSkin.SetNumberOfContours(1)
-    mcSkin.SetValue(0, 50)
-    mcSkin.Update()
-
-    # Contouring for the bones
-    mcBone = vtk.vtkMarchingCubes()
-    mcBone.SetInputConnection(reader.GetOutputPort())
-    mcBone.SetNumberOfContours(1)
-    mcBone.SetValue(0, 75)
-    mcBone.Update()
-
+    # Get the distance between the bone and the skin
     distanceFilter = vtk.vtkDistancePolyDataFilter()
     distanceFilter.SetInputData(0, mcBone.GetOutput())
     distanceFilter.SetInputData(1, mcSkin.GetOutput())
     distanceFilter.Update()
 
     mapper = vtk.vtkPolyDataMapper()
+
+    # Set the coloring range
     lut = mapper.GetLookupTable()
     lut.SetHueRange(2/3, 0)
     lut.Build()
+
+    # Apply the color
     mapper.SetInputConnection(distanceFilter.GetOutputPort())
     mapper.SetScalarRange(
         distanceFilter.GetOutput().GetPointData().GetScalars().GetRange()[0],
         distanceFilter.GetOutput().GetPointData().GetScalars().GetRange()[1]
     )
 
-
-
-
-    mapperBone = vtk.vtkDataSetMapper()
-    mapperBone.SetInputConnection(mcBone.GetOutputPort())
-    mapperBone.ScalarVisibilityOff()
-
     actorBone = vtk.vtkActor()
     actorBone.SetMapper(mapper)
     actorBone.GetProperty().SetColor(0.9, 0.9, 0.9)
 
+    # Group the actors
     assembly = vtk.vtkAssembly()
     assembly.AddPart(actorBone)
 
@@ -312,8 +250,28 @@ def main():
     # Load SLC file
     reader = load_slc(FILENAME)
 
+    # Contouring for the skin
+    mcSkin = vtk.vtkMarchingCubes()
+    mcSkin.SetInputConnection(reader.GetOutputPort())
+    mcSkin.SetNumberOfContours(1)
+    mcSkin.SetValue(0, 50)
+    mcSkin.Update()
 
-    actor = [tube(reader), semiTransparent(reader), normal(reader), colorBones(reader)]
+    # Contouring for the bones
+    mcBone = vtk.vtkMarchingCubes()
+    mcBone.SetInputConnection(reader.GetOutputPort())
+    mcBone.SetNumberOfContours(1)
+    mcBone.SetValue(0, 75)
+    mcBone.Update()
+
+
+    actor = [
+        tube(reader, mcBone, mcSkin), 
+        semiTransparent(mcBone, mcSkin), 
+        normal(mcBone, mcSkin), 
+        colorBones(mcBone, mcSkin)
+    ]
+
     outline = create_outline(reader, (0,0,0))
 
 
