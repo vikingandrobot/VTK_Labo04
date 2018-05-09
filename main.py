@@ -2,9 +2,12 @@
 # Author : Sathiya Kirushnapillai, Mathieu Monteverde
 
 import math
+import sys
+
 import vtk
 from vtk.util.colors import white
 import os.path
+
 
 def load_slc(filename):
     """ Load a slc file and return its content
@@ -36,12 +39,21 @@ def create_outline(algorithmOutput, color):
     outlineMapper.SetInputConnection(outline.GetOutputPort())
     outlineActor = vtk.vtkActor()
     outlineActor.SetMapper(outlineMapper)
-    outlineActor.GetProperty().SetColor(color);
+    outlineActor.GetProperty().SetColor(color)
 
     return outlineActor
 
 
 def tube(reader, mcBone, mcSkin):
+    """ Create the tube visualisation of the skin. The distance between each
+        tube is 1cm.
+    Args:
+        reader: vtkSLCReader used to read the raw scanner data
+        mcBone: vtkMarchingCubes used to create the bone
+        mcSkin: vtkMarchingCubes used to create the skin
+    Returns:
+        vtkAssembly
+    """
 
     bounds = mcSkin.GetOutput().GetBounds()
 
@@ -50,11 +62,11 @@ def tube(reader, mcBone, mcSkin):
     plane.SetNormal(0, 0, 1)
     plane.SetOrigin((bounds[1] + bounds[0]) / 2.0,
                     (bounds[3] + bounds[2]) / 2.0,
-                    bounds[4]);
+                    bounds[4])
 
     high = plane.EvaluateFunction((bounds[1] + bounds[0]) / 2.0,
                                   (bounds[3] + bounds[2]) / 2.0,
-                                   bounds[5]);
+                                   bounds[5])
 
     # Get the number and size of voxel (Axis:z)
     nbVoxelZ = reader.GetDataExtent()[5]
@@ -64,7 +76,7 @@ def tube(reader, mcBone, mcSkin):
     cutter = vtk.vtkCutter()
     cutter.SetCutFunction(plane)
     cutter.SetInputConnection(mcSkin.GetOutputPort())
-    cutter.GenerateValues(math.floor(nbVoxelZ * sizeVoxelZ / 10) + 1, 0, high);
+    cutter.GenerateValues(math.floor(nbVoxelZ * sizeVoxelZ / 10) + 1, 0, high)
 
     tubeFilter = vtk.vtkTubeFilter()
     tubeFilter.SetInputConnection(cutter.GetOutputPort())
@@ -96,6 +108,15 @@ def tube(reader, mcBone, mcSkin):
 
 
 def semiTransparent(mcBone, mcSkin):
+    """ Create the semi-transparent visualisation of the skin. A sphere is
+        clipping the skin near the articulation and the front face (as seen
+        from the camera) of the skin is semi-transparent.
+    Args:
+        mcBone: vtkMarchingCubes used to create the bone
+        mcSkin: vtkMarchingCubes used to create the skin
+    Returns:
+        vtkAssembly
+    """
 
     # Create a sphere for clipping
     sphere = vtk.vtkSphere()
@@ -145,6 +166,15 @@ def semiTransparent(mcBone, mcSkin):
 
 
 def normal(mcBone, mcSkin):
+    """ Create the default visualisation of the skin. A sphere is
+        clipping the skin near the articulation and is slightly visible using
+        a low opacity.
+    Args:
+        mcBone: vtkMarchingCubes used to create the bone
+        mcSkin: vtkMarchingCubes used to create the skin
+    Returns:
+        vtkAssembly
+    """
 
     # Create a sphere for clipping
     sphere = vtk.vtkSphere()
@@ -205,6 +235,19 @@ def normal(mcBone, mcSkin):
 
 
 def colorBones(mcBone, mcSkin):
+    """ Create the colored distance visualisation of the bone to the skin.
+        The bone is colored from blue (far) to red (close) based on its
+        distance to the skin. This function looks for a file named
+        'distanceFilter.vtk' in the current directory and if it exists, it
+        reads the necessary data from it (thus saving a processing time).
+        If the file is not to be found, the script processes the distances and
+        saves the result in a file with the same name as above.
+    Args:
+        mcBone: vtkMarchingCubes used to create the bone
+        mcSkin: vtkMarchingCubes used to create the skin
+    Returns:
+        vtkAssembly
+    """
 
     SAVED_DISTANCE_FILEPATH = './distanceFilter.vtk'
 
@@ -261,9 +304,18 @@ def colorBones(mcBone, mcSkin):
 
 
 def main():
-    print("VTK Labo 4")
+    """ This main function reads raw scanner data of a knee and create four
+        visualisations inside a window. The visualisations are detailed
+        in the 'tube', 'semiTransperent', 'normal' and 'colorBones' functions.
+        The input file is the first argument of the script.
+        
+        Usage example: python main.py data/vw_knee.slc
+    """
+    if (len(sys.argv) != 2):
+        print("Usage: python main.py <path to raw scanner data file>")
+        sys.exit()
 
-    FILENAME = "data/vw_knee.slc"
+    FILENAME = sys.argv[1]
 
     WINDOW_WIDTH = 1200
     WINDOW_HEIGHT = 780
@@ -287,7 +339,6 @@ def main():
     mcBone.SetValue(0, 75)
     mcBone.Update()
 
-
     actor = [
         tube(reader, mcBone, mcSkin),
         semiTransparent(mcBone, mcSkin),
@@ -295,8 +346,7 @@ def main():
         colorBones(mcBone, mcSkin)
     ]
 
-    outline = create_outline(reader, (0,0,0))
-
+    outline = create_outline(reader, (0, 0, 0))
 
     # Camera
     camera = vtk.vtkCamera()
@@ -304,8 +354,7 @@ def main():
     camera.Elevation(-100)
     camera.Azimuth(0)
     camera.SetRoll(180)
-    camera.SetFocalPoint(0,0,0)
-
+    camera.SetFocalPoint(0, 0, 0)
 
     # Create the Renderers
     renderers = []
@@ -351,4 +400,4 @@ def main():
 
 
 if __name__ == "__main__":
-   main()
+    main()
