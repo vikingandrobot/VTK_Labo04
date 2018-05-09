@@ -284,9 +284,7 @@ def main():
 
     for i in range(0, NB_RENDERER):
         r = vtk.vtkRenderer()
-        #r.SetBackground(RENDERERS_COLORS[i][0], RENDERERS_COLORS[i][1], RENDERERS_COLORS[i][2])
-
-        r.SetBackground(1, 1, 1)
+        r.SetBackground(RENDERERS_COLORS[i][0], RENDERERS_COLORS[i][1], RENDERERS_COLORS[i][2])
 
         x = 0 if i % 2 == 0 else 0.5
         y = (1 - 0.5 * (i // 2)) - 0.5
