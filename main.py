@@ -74,7 +74,7 @@ def tube(reader):
     plane.SetOrigin((bounds[1] + bounds[0]) / 2.0,
                     (bounds[3] + bounds[2]) / 2.0,
                     bounds[4]);
-    
+
     # Create cutter
     high = plane.EvaluateFunction((bounds[1] + bounds[0]) / 2.0,
                                   (bounds[3] + bounds[2]) / 2.0,
@@ -212,6 +212,9 @@ def colorBones(reader):
     distanceFilter.Update()
 
     mapper = vtk.vtkPolyDataMapper()
+    lut = mapper.GetLookupTable()
+    lut.SetHueRange(2/3, 0)
+    lut.Build()
     mapper.SetInputConnection(distanceFilter.GetOutputPort())
     mapper.SetScalarRange(
         distanceFilter.GetOutput().GetPointData().GetScalars().GetRange()[0],
