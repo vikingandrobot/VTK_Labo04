@@ -4,6 +4,7 @@
 import math
 import vtk
 from vtk.util.colors import white
+import os.path
 
 def load_slc(filename):
     """ Load a slc file and return its content
@@ -205,10 +206,33 @@ def normal(mcBone, mcSkin):
 
 def colorBones(mcBone, mcSkin):
 
+    SAVED_DISTANCE_FILEPATH = './distanceFilter.vtk'
+
     # Get the distance between the bone and the skin
+    # If a saved file already exists, use iter
     distanceFilter = vtk.vtkDistancePolyDataFilter()
-    distanceFilter.SetInputData(0, mcBone.GetOutput())
-    distanceFilter.SetInputData(1, mcSkin.GetOutput())
+    if (os.path.isfile(SAVED_DISTANCE_FILEPATH)):
+        # Read from saved file
+        reader = vtk.vtkPolyDataReader()
+        reader.SetFileName(SAVED_DISTANCE_FILEPATH)
+        reader.Update()
+        input = reader.GetOutput()
+
+        distanceFilter = vtk.vtkCleanPolyData()
+        distanceFilter.SetInputData(input)
+    else:
+        # Compute the data
+        distanceFilter.SetInputData(0, mcBone.GetOutput())
+        distanceFilter.SetInputData(1, mcSkin.GetOutput())
+        distanceFilter.Update()
+
+        # Save to file
+        writer = vtk.vtkPolyDataWriter()
+        writer.SetInputConnection(distanceFilter.GetOutputPort()	)
+        writer.SetFileName(SAVED_DISTANCE_FILEPATH)
+        writer.Update()
+
+    # Update
     distanceFilter.Update()
 
     mapper = vtk.vtkPolyDataMapper()
@@ -234,7 +258,6 @@ def colorBones(mcBone, mcSkin):
     assembly.AddPart(actorBone)
 
     return assembly
-
 
 
 def main():
@@ -266,9 +289,9 @@ def main():
 
 
     actor = [
-        tube(reader, mcBone, mcSkin), 
-        semiTransparent(mcBone, mcSkin), 
-        normal(mcBone, mcSkin), 
+        tube(reader, mcBone, mcSkin),
+        semiTransparent(mcBone, mcSkin),
+        normal(mcBone, mcSkin),
         colorBones(mcBone, mcSkin)
     ]
 
